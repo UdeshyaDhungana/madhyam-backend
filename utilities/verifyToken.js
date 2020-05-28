@@ -11,18 +11,16 @@ req.user_query = {
 */
 module.exports = function(req, res, next){
 	const authHeader = req.headers['authorization'];
-
 	const token = authHeader && authHeader.split(' ')[1];
-
-	if (token == null){
-		req.user_query = null;
-	}
+	
+	user_query = {id: null};
 
 	jwt.verify(token, process.env.ACCESS_TOKEN, (err, user) => {
-		if (err){
-			req.user_query= null;
+		if (!err && user){
+			user_query = user;
 		}
-		req.user_query = user;
 	});
+	
+	req.user_query = Object.assign({}, user_query);
 	next();
 }

@@ -14,4 +14,7 @@ router.post('/', usersController.validate_user_post, usersController.users_post)
 
 router.get('/:id',usersController.singleUser_get);
 
+router.delete('/:id', usersController.singleUser_delete);
+
+
 module.exports = router;

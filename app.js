@@ -11,6 +11,7 @@ var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 var articlesRouter = require('./routes/articles');
 const loginRouter = require('./routes/login');
+const verificationRouter = require('./routes/verification');
 var verifyToken = require('./utilities/verifyToken');
 
 
@@ -18,7 +19,10 @@ var verifyToken = require('./utilities/verifyToken');
 
 var app = express();
 
-mongoose.connect('mongodb://127.0.0.1/madhyam', {useNewUrlParser: true, useUnifiedTopology: true});
+mongoose.connect('mongodb://127.0.0.1/madhyam', {
+	useNewUrlParser: true,
+	useUnifiedTopology: true,
+	useFindAndModify: false});
 var connection = mongoose.connection;
 connection.on('error', () => {
 	console.log('Connnection failed');
@@ -39,7 +43,7 @@ app.use('/', indexRouter);
 app.use('/users', usersRouter);
 app.use('/articles', articlesRouter);
 app.use('/login', loginRouter);
-
+app.use('/verification', verificationRouter);
 
 
 

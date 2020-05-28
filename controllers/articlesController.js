@@ -2,13 +2,9 @@
 const { check, validationResult } = require('express-validator');
 const Article = require('../models/articles');
 const User = require('../models/users');
-
+const mongoose = require('mongoose');
+const ObjectId = mongoose.Types.ObjectId;
 // GET all articles
-module.exports.article_get = function (req, res, next) {
-	return res.status(400).json({
-		body: "Not found",
-	});
-}
 
 // Vaidation for creating a new article
 module.exports.validate_article_post = [
@@ -27,12 +23,13 @@ module.exports.article_post = function (req, res, next) {
 	const errors = validationResult(req);
 
 	if (!errors.isEmpty()) {
-		return res.status(400).json({
+		//unprocessable entity
+		return res.status(422).json({
 			errors: errors.array()
 		})
 	}
 
-	if (!req.user_query) {
+	if (!req.user_query.id) {
 		return res.status(401).json({
 			body: "No user found",
 			message: "Unauthorized error",
@@ -68,7 +65,7 @@ module.exports.article_post = function (req, res, next) {
 			// Felt cute, might add error handling in next version idk
 			// After saving send details of present page
 			res.json({
-				error: null,
+				errors: null,
 				message: "Article created successfully",
 			});
 			// TODO: Redirect to current article's page
@@ -77,7 +74,7 @@ module.exports.article_post = function (req, res, next) {
 
 }
 
-module.exports.singleArticle_get = function (req, res, next) {
+module.exports.singleArticle_get = function (req, res) {
 	Article.findById(req.params.id, (error, article) => {
 		if (error || !article) {
 			// if error or article is not found
@@ -88,4 +85,24 @@ module.exports.singleArticle_get = function (req, res, next) {
 			res.json(article);
 		}
 	})
+}
+
+module.exports.singleArticle_delete = function(req, res){
+	Article.deleteOne({_id: req.params.id, author: req.user_query.id}, (error) => {
+		if (error){
+			res.status(401).json(
+				{body: "You are not authorized!"}
+			)
+		} else {
+			User.updateOne( {_id: req.user_query.id}, { $pull: {articles: req.params.id} })
+				.then( error => {
+					if (error){
+						console.log("Article deleted but not cleared from user's entry");	
+					}
+					res.json(
+						{body: "Article deleted successfully", errors: null}
+					)
+				});
+		}
+	});
 }
