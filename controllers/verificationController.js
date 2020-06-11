@@ -4,8 +4,8 @@ const User = require('../models/users');
 
 module.exports.verification_get = function(req, res, next){
 	currentLink = req.params.id;
-	Verification.findOneAndDelete({link: currentLink}, (err, foundVerification) => {
-		if (err){
+	Verification.findOneAndDelete({link: currentLink}, (findingError, foundVerification) => {
+		if (findingError){
 			res.status(500).json({
 				body: "Internal server error"
 			});
@@ -16,16 +16,15 @@ module.exports.verification_get = function(req, res, next){
 				});
 			}
 
-			relatedUserId = foundVerification.owner;
+			var relatedUserId = foundVerification.owner;
 			User.findByIdAndUpdate(relatedUserId, {
 				emailConfirmation: true,
-			}, (error, user) => {
-				if (error){
+			}, (updateError, user) => {
+				if (updateError){
 					res.status(500).json({
 						body: "Internal server error"
 					});
 				} else {
-
 					//Email was verified, so no worries
 					res.json({
 						body: "Email is verified"

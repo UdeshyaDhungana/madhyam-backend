@@ -23,8 +23,8 @@ module.exports.login_post = function(req, res, next){
 	}
 
 	// authenticate user
-	User.findOne({email: req.body.email}, (err, foundUser) => {
-		if (err){
+	User.findOne({email: req.body.email}, (findingError, foundUser) => {
+		if (findingError){
 			return res.status(500).json({
 				body: "Internal server error"
 			});
@@ -36,10 +36,10 @@ module.exports.login_post = function(req, res, next){
 				message: "Email or password is incorrect",
 			})
 		}
-		
+
 		//returns same=true if matched, same=false, if unmatched
-		bcrypt.compare(req.body.password, foundUser.password, (err, same) => {
-			if (err){
+		bcrypt.compare(req.body.password, foundUser.password, (comparingError, same) => {
+			if (comparingError){
 				res.status(500).json({
 					body: "Internal server error",
 				});
@@ -53,22 +53,25 @@ module.exports.login_post = function(req, res, next){
 			} else {
 				// Authentication is done
 				// Generate a token and send it back to user
-				var currentUser = {
+				var payload = {
 					id: foundUser._id,
 				}
 
 				// Send a new accesstoken on login
-				const accessToken = jwt.sign(currentUser, process.env.ACCESS_TOKEN, {
-					// Token expires in 14days
-					expiresIn: '14d'
-				});
-
-				res.json({
-					accessToken,
-					message: "Login permission granted"
-				});
+				jwt.sign(payload, process.env.ACCESS_TOKEN,
+					{expiresIn: '14d'}, (signingError, accessToken) => {
+						if (signingError){
+							return res.status(500).json({
+								body: "Error occured while signing token",
+							})
+						} else {
+							res.json({
+								accessToken,
+								message: "Login permission granted"
+							});
+						}
+					});
 			}
-
 		})
 	})
 }

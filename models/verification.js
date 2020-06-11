@@ -6,6 +6,7 @@ var Schema = mongoose.Schema;
 var verificationSchema = new Schema({
 	link: {
 		type: String,
+		required: true,
 		default: crypto.randomBytes(15).toString('hex'),
 	},
 	owner: {

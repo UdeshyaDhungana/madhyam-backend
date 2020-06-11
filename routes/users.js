@@ -4,9 +4,6 @@ var router = express.Router();
 // Controller import
 var usersController = require('../controllers/usersController');
 
-/* GET users listing. */
-router.get('/', usersController.users_get);
-
 // CREATING A NEW USER
 router.post('/', usersController.validate_user_post, usersController.users_post);
 

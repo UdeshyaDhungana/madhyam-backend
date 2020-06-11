@@ -39,12 +39,12 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(verifyToken);
 
 // Routing middlewares
-app.use('/', indexRouter);
-app.use('/users', usersRouter);
-app.use('/articles', articlesRouter);
-app.use('/login', loginRouter);
+app.use('/api/', indexRouter);
+app.use('/api/users', usersRouter);
+app.use('/api/articles', articlesRouter);
+app.use('/api/login', loginRouter);
+
+//used for link verification
 app.use('/verification', verificationRouter);
-
-
 
 module.exports = app;

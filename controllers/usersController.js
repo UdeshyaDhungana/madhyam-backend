@@ -1,4 +1,3 @@
-// 
 // Imports
 const bcrypt = require('bcrypt');
 const { check, validationResult } = require('express-validator');
@@ -7,12 +6,7 @@ const async = require('async');
 const Article = require('../models/articles');
 const nodemailer = require('nodemailer');
 const Verification = require('../models/verification');
-// All users list
-module.exports.users_get = function (req, res, next) {
-	return res.status(400).json({
-		body: "Not found",
-	});
-}
+const jwt = require('jsonwebtoken');
 
 // Validation steps for creating new user
 module.exports.validate_user_post = [
@@ -43,8 +37,9 @@ module.exports.users_post = function (req, res, next) {
 	}
 
 	// Hash and store password
-	bcrypt.hash(req.body.password, 10, (error, hash) => {
-		if (error) {
+	// 10 rounds of salts
+	bcrypt.hash(req.body.password, 10, (hashError, hash) => {
+		if (hashError) {
 			res.json(500).json({
 				error
 			})
@@ -55,8 +50,8 @@ module.exports.users_post = function (req, res, next) {
 				bio: req.body.bio,
 				email: req.body.email,
 				password: hash
-			}).save((error, createdUser) => {
-				if (error) {
+			}).save((errorWhileSaving, createdUser) => {
+				if (errorWhileSaving) {
 					res.status(500).json({
 						error
 					});
@@ -64,11 +59,10 @@ module.exports.users_post = function (req, res, next) {
 					//send mail to that email address
 					new Verification({
 						owner: createdUser._id,
-					}).save((error, createdVerification) => {
-						if (error){
+					}).save((errorWhileVerification, createdVerification) => {
+						if (errorWhileVerification){
 							res.status(206).json({body: "User created but verification mailing failed"});
 						} else {
-
 							var transporter = nodemailer.createTransport({
 								service: 'Gmail',
 								auth: {
@@ -79,11 +73,11 @@ module.exports.users_post = function (req, res, next) {
 							});
 
 							Verification_html = `
-									<h1>Verify email</h1>
+									<h1>Email verification</h1>
 									<h3>Visit the link below to verify email</h3>
 									<a href="http://localhost:3000/verification/${createdVerification.link}">Click Here</a>
 									`;
-						 
+
 							var mailOptions = {
 								from: 'Madhyam Team <075bct095.udeshya@pcampus.edu.np>',
 								to: req.body.email,
@@ -91,14 +85,27 @@ module.exports.users_post = function (req, res, next) {
 								html: Verification_html
 							}
 
-							transporter.sendMail(mailOptions, function(error, info){
-								if (error){
+							transporter.sendMail(mailOptions, function(mailingError){
+								if (mailingError){
 									res.status(206).json({body: "User created but email verification failed"});
 								} else {
-									res.json({
-										errors: null,
-										message: "User has been created",
-									});
+									//Send jwt also
+									var payload = {
+										id: createdUser._id,
+									}
+									jwt.sign(payload, process.env.ACCESS_TOKEN,
+										{expiresIn: '14d'}, function(signingError, token){
+											if (signingError){
+												res.status(206).json({
+													body: "User created but failed to sign in",
+												});
+											}
+											res.json({
+												errors: null,
+												accessToken: token,
+												message: "User has been created",
+											});
+										});
 								}
 							});
 
@@ -113,7 +120,7 @@ module.exports.users_post = function (req, res, next) {
 // Getting a single user's profile
 module.exports.singleUser_get = function (req, res, next) {
 
-	User.findById(req.params.id, (error, user) => {
+	User.findById(req.params.id).populate('articles', 'title url createdAt').exec((error, user) => {
 		if (error || !user){
 			res.status(404).json({
 				user: null,
@@ -126,7 +133,10 @@ module.exports.singleUser_get = function (req, res, next) {
 				lastname: user.lastname,
 				bio: user.bio,
 				articles: user.articles,
-				editPermission: false
+				editPermission: false,
+				fullname: user.fullname,
+				url: user.url,
+				_id: user._id
 			};
 			// If user exists and 
 			// If the person is requesting his own id, provide email too

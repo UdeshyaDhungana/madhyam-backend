@@ -17,6 +17,17 @@ var articleSchema = new Schema({
 	edited: {type: Boolean, default: false}
 },{
 	timestamps: true,
+	toJSON: {
+		virtuals: true,
+	},
+	toObject: {
+		virtuals: true,
+	},
+	id: false,
 });
+
+articleSchema.virtual('url').get(function(){
+	return '/articles/'+this._id;
+})
 
 module.exports = mongoose.model('Article', articleSchema);
