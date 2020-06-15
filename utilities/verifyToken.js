@@ -11,20 +11,22 @@ req.user_query = {
 
 */
 module.exports = function(req, res, next){
-	const authHeader = req.headers['authorization'];
+	const authHeader = req.cookies['authorization'];
 	const token = authHeader && authHeader.split(' ')[1];
-	
+
 	req.user_query = {
 		id: null,
 		iat: null,
 		exp: null,
+		tokenExists: Boolean(token),
 	}
 
 	jwt.verify(token, process.env.ACCESS_TOKEN, (err, user) => {
 		if (!err){
 			User.findById(user.id, (err, doc) => {
 				if (!err && doc){
-					req.user_query = Object.assign({}, user);
+					Object.assign(req.user_query, user);
+					Object.assign(req.user_query, {tokenExists: true});
 				}
 				next();
 			});

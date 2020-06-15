@@ -12,6 +12,8 @@ var usersRouter = require('./routes/users');
 var articlesRouter = require('./routes/articles');
 const loginRouter = require('./routes/login');
 const verificationRouter = require('./routes/verification');
+const validateTokenRouter = require('./routes/validateToken')
+
 var verifyToken = require('./utilities/verifyToken');
 
 
@@ -43,6 +45,7 @@ app.use('/api/', indexRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/articles', articlesRouter);
 app.use('/api/login', loginRouter);
+app.use('/api/validatetoken', validateTokenRouter);
 
 //used for link verification
 app.use('/verification', verificationRouter);

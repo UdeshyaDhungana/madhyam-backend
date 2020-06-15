@@ -16,9 +16,9 @@ module.exports.login_post = function(req, res, next){
 
 	if (!errors.isEmpty()){
 		//Bad request error
-		return res.status(400).json({
+		return res.status(422).json({
 			user: null,
-			message: "Email or password is incorrect"
+			body: "Email password is incorrect"
 		});
 	}
 
@@ -33,7 +33,7 @@ module.exports.login_post = function(req, res, next){
 			// Error occured or user is not found
 			return res.status(401).json({
 				user: null,
-				message: "Email or password is incorrect",
+				body: "Email or password is incorrect",
 			})
 		}
 
@@ -46,9 +46,9 @@ module.exports.login_post = function(req, res, next){
 			}
 			else if (!same){
 				// If not same or
-				return res.status(404).json({
+				return res.status(401).json({
 					user: null,
-					message: "Email or password is incorrect"
+					body: "Email or password is incorrect"
 				});
 			} else {
 				// Authentication is done
@@ -65,10 +65,18 @@ module.exports.login_post = function(req, res, next){
 								body: "Error occured while signing token",
 							})
 						} else {
-							res.json({
-								accessToken,
-								message: "Login permission granted"
-							});
+							//set cookie
+							// duration: 14days, 23 hours, 55 minutes
+							var token = "Bearer " + accessToken;
+							//13 days 23 hrs 50 minutes
+							var twoWeekApprox = 86400*1000*14-10*60*1000;
+							res.cookie('authorization', token, 
+								{maxAge: twoWeekApprox, httpOnly: true,
+								}).json({
+									id: foundUser._id,
+									errors: null,
+									body: "Login permission granted"
+								});
 						}
 					});
 			}

@@ -31,7 +31,7 @@ module.exports.article_post = function (req, res, next) {
 	if (!req.user_query.id) {
 		return res.status(401).json({
 			body: "No user found",
-			message: "Unauthorized error",
+			body: "Unauthorized error",
 		})
 	}
 
@@ -42,7 +42,7 @@ module.exports.article_post = function (req, res, next) {
 	}).save((savingError, currentArticle) => {
 		if (savingError) {
 			return res.status(500).json({
-				message: "Internal Server Error",
+				body: "Internal Server Error",
 			})
 		}
 		// Append current article to user's article field
@@ -58,7 +58,7 @@ module.exports.article_post = function (req, res, next) {
 					// Aborted saving					
 					res.status(500).json({
 						error: "Article could not be created",
-						message: "Internal server error",
+						body: "Internal server error",
 					});
 				})
 			}
@@ -66,7 +66,7 @@ module.exports.article_post = function (req, res, next) {
 			// After saving send details of present page
 			res.json({
 				errors: null,
-				message: "Article created successfully",
+				body: "Article created successfully",
 				id: currentArticle._id,
 			});
 			// TODO: Redirect to current article's page

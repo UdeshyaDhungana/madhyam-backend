@@ -75,7 +75,7 @@ module.exports.users_post = function (req, res, next) {
 							Verification_html = `
 									<h1>Email verification</h1>
 									<h3>Visit the link below to verify email</h3>
-									<a href="http://localhost:3000/verification/${createdVerification.link}">Click Here</a>
+									<a href="http://192.168.1.64:3000/verification/${createdVerification.link}">Click Here</a>
 									`;
 
 							var mailOptions = {
@@ -89,23 +89,10 @@ module.exports.users_post = function (req, res, next) {
 								if (mailingError){
 									res.status(206).json({body: "User created but email verification failed"});
 								} else {
-									//Send jwt also
-									var payload = {
-										id: createdUser._id,
-									}
-									jwt.sign(payload, process.env.ACCESS_TOKEN,
-										{expiresIn: '14d'}, function(signingError, token){
-											if (signingError){
-												res.status(206).json({
-													body: "User created but failed to sign in",
-												});
-											}
-											res.json({
-												errors: null,
-												accessToken: token,
-												message: "User has been created",
-											});
-										});
+									res.json({
+										errors: null,
+										body: "User has been created successfully",
+									})
 								}
 							});
 
@@ -119,7 +106,6 @@ module.exports.users_post = function (req, res, next) {
 
 // Getting a single user's profile
 module.exports.singleUser_get = function (req, res, next) {
-
 	User.findById(req.params.id).populate('articles', 'title url createdAt').exec((error, user) => {
 		if (error || !user){
 			res.status(404).json({
