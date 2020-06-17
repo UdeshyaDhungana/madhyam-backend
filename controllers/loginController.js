@@ -14,7 +14,7 @@ module.exports.login_post = function(req, res, next){
 	// form data error
 	const validation_errors = validationResult(req);
 
-	if (!errors.isEmpty()){
+	if (!validation_errors.isEmpty()){
 		//Bad request error
 		return res.status(422).json({
 			error: "Username or password is incorrect",

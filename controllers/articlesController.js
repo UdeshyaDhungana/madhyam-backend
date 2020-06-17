@@ -77,8 +77,8 @@ module.exports.article_post = function (req, res, next) {
 }
 
 module.exports.singleArticle_get = function (req, res) {
-	Article.findById(req.params.id).populate('author', 'firstname lastname fullname url').exec(
-		(findingError, article) => {
+	Article.findById(req.params.id).populate('author', 'firstname lastname fullname url')
+		.exec((findingError, article) => {
 			if (findingError || !article) {
 				// if error or article is not found
 				res.status(404).json({
@@ -87,12 +87,13 @@ module.exports.singleArticle_get = function (req, res) {
 				})
 			} else {
 				res.json(Object.assign({
+					article: article._doc,
 					error: null,
-				}, article));
+				}, ));
 			}
 		}
-	)}
-
+	)
+}
 
 //delte article remaining
 module.exports.singleArticle_delete = function(req, res){

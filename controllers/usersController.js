@@ -80,7 +80,7 @@ module.exports.users_post = function (req, res, next) {
 							Verification_html = `
 									<h1>Email verification</h1>
 									<h3>Visit the link below to verify email</h3>
-									<a href="http://192.168.1.64:3000/verification/${createdVerification.link}">Click Here</a>
+									<a href="http://192.168.1.64:3010/verification/${createdVerification.link}">Click Here</a>
 									`;
 
 							var mailOptions = {

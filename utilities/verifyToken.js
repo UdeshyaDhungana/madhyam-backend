@@ -23,6 +23,8 @@ module.exports = function(req, res, next){
 
 	jwt.verify(token, process.env.ACCESS_TOKEN, (err, user) => {
 		if (!err){
+			//this is done because, if user deletes his/her account, 
+			//her token should be discarded
 			User.findById(user.id, (err, doc) => {
 				if (!err && doc){
 					Object.assign(req.user_query, user);

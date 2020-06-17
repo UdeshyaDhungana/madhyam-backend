@@ -6,6 +6,9 @@ var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var mongoose = require('mongoose');
 var cors = require('cors');
+var debug = require('debug')('database');
+var compression = require('compression');
+var helmet = require('helmet');
 // Routers
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
@@ -22,20 +25,22 @@ var verifyToken = require('./utilities/verifyToken');
 
 var app = express();
 
-mongoose.connect('mongodb://127.0.0.1/madhyam', {
+mongoose.connect(process.env.MONGO_URI, {
 	useNewUrlParser: true,
 	useUnifiedTopology: true,
 	useFindAndModify: false});
 var connection = mongoose.connection;
-connection.on('error', () => {
-	console.log('Connnection failed');
+connection.on('error', (x) => {
+	debug('Update error: '+ x);
 });
 
+app.use(helmet());
 app.use(cors());
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
+app.use(compression());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Check if user exists and load into user_query variable if  exists
@@ -48,8 +53,7 @@ app.use('/api/articles', articlesRouter);
 app.use('/api/login', loginRouter);
 app.use('/api/validatetoken', validateTokenRouter);
 app.use('/api/logout', logoutRouter);
-
 //used for link verification
-app.use('/verification', verificationRouter);
+app.use('/api/verification', verificationRouter);
 
 module.exports = app;
