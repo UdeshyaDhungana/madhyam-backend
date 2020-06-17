@@ -32,7 +32,8 @@ module.exports.users_post = function (req, res, next) {
 
 	if (!errors.isEmpty()) {
 		return res.status(422).json({
-			errors: errors.array()
+			error: "Inappropriate form data",
+			errorDetails: errors.array()
 		})
 	}
 
@@ -41,7 +42,8 @@ module.exports.users_post = function (req, res, next) {
 	bcrypt.hash(req.body.password, 10, (hashError, hash) => {
 		if (hashError) {
 			res.json(500).json({
-				error
+				error: "Internal server error",
+				errorDetails: "Error while hashing",
 			})
 		} else {
 			new User({
@@ -53,7 +55,8 @@ module.exports.users_post = function (req, res, next) {
 			}).save((errorWhileSaving, createdUser) => {
 				if (errorWhileSaving) {
 					res.status(500).json({
-						error
+						error: "Internal server error",
+						errorDetails: "Error while saving user",
 					});
 				} else {
 					//send mail to that email address
@@ -61,7 +64,9 @@ module.exports.users_post = function (req, res, next) {
 						owner: createdUser._id,
 					}).save((errorWhileVerification, createdVerification) => {
 						if (errorWhileVerification){
-							res.status(206).json({body: "User created but verification mailing failed"});
+							res.status(206).json({
+								error: null,
+								errorDetails: "User created but verification mailing failed"});
 						} else {
 							var transporter = nodemailer.createTransport({
 								service: 'Gmail',
@@ -87,10 +92,12 @@ module.exports.users_post = function (req, res, next) {
 
 							transporter.sendMail(mailOptions, function(mailingError){
 								if (mailingError){
-									res.status(206).json({body: "User created but email verification failed"});
+									res.status(206).json({
+										error: null,
+										errorDetails: "User created but email verification failed"});
 								} else {
 									res.json({
-										errors: null,
+										error: null,
 										body: "User has been created successfully",
 									})
 								}
@@ -109,7 +116,8 @@ module.exports.singleUser_get = function (req, res, next) {
 	User.findById(req.params.id).populate('articles', 'title url createdAt').exec((error, user) => {
 		if (error || !user){
 			res.status(404).json({
-				user: null,
+				error: "The requested user could not be found",
+				errorDetails: "Not found",
 			})
 		}	else {
 			// You should use JWT and send appropriate information
@@ -130,24 +138,31 @@ module.exports.singleUser_get = function (req, res, next) {
 				toSend['email'] = user.email;
 				toSend['editPermission'] = true
 			}
-			res.json(toSend);
+			res.json(Object.assign({error: null}, toSend));
 		}
 	});
 }
 
 module.exports.singleUser_delete = function(req, res){
 	if (!req.user_query.id){
-		return res.status(400).json({body: "Bad request!"});
+		return res.status(400).json({error: "Bad request!",
+			errorDetails: "This happened because you maybe unauthorized\
+			or the user does not exist",
+		});
 	}
 	User.findOneAndDelete({_id: req.user_query.id}, (err, foundUser) => {
 		if (err){
-			return res.status(500).json({body: "Internal Server error"});
+			return res.status(500).json({error: "Internal Server error",
+				errorDetails: "Error while deleting",
+			});
 		}
 
 		//The chances of this thing happening is you winning a lottery
 		//This code won't execute, but kept here for safety reasons
 		else if (!foundUser){
-			return res.status(400).json({body: "Bad request"});
+			return res.status(400).json({error: "Bad request", 
+				errorDetails: "Dunno, some kinda error",
+			});
 		}
 
 		else {
@@ -162,10 +177,12 @@ module.exports.singleUser_delete = function(req, res){
 			}, error => {
 				if (error){
 					//Manually checking for errors
-					return res.status(500).json({body: "Something went wrong"});
+					return res.status(500).json({error: "Something went wrong",
+						errorDetails: "Error while clearing the database",
+					});
 				}
 				else {
-					return res.json({errors: null, body: "User deleted successfully"});
+					return res.json({error: null, body: "User deleted successfully"});
 				}
 			})
 		}

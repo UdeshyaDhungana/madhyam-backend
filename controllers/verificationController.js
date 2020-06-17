@@ -7,12 +7,14 @@ module.exports.verification_get = function(req, res, next){
 	Verification.findOneAndDelete({link: currentLink}, (findingError, foundVerification) => {
 		if (findingError){
 			res.status(500).json({
-				body: "Internal server error"
+				error: "Internal server error",
+				errorDetails: "Deletion error",
 			});
 		} else {
 			if (!foundVerification){
 				return res.status(400).json({
-					body: "Bad request"
+					error: "Bad request",
+					errorDetails: "Bad request",
 				});
 			}
 
@@ -22,11 +24,13 @@ module.exports.verification_get = function(req, res, next){
 			}, (updateError, user) => {
 				if (updateError){
 					res.status(500).json({
-						body: "Internal server error"
+						error: "Internal server error",
+						errorDetails: "Error while updating data",
 					});
 				} else {
 					//Email was verified, so no worries
 					res.json({
+						error: null,
 						body: "Email is verified"
 					});
 				}

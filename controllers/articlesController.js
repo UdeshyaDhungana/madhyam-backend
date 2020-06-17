@@ -24,14 +24,15 @@ module.exports.article_post = function (req, res, next) {
 	if (!errors.isEmpty()) {
 		//unprocessable entity
 		return res.status(422).json({
-			errors: errors.array()
+			error: "Inappropriate form data",
+			errorDetails: errors.array()
 		})
 	}
 
 	if (!req.user_query.id) {
 		return res.status(401).json({
-			body: "No user found",
-			body: "Unauthorized error",
+			error: "Unauthorized user",
+			errorDetails: "User does not exist, or token has expired",
 		})
 	}
 
@@ -42,7 +43,8 @@ module.exports.article_post = function (req, res, next) {
 	}).save((savingError, currentArticle) => {
 		if (savingError) {
 			return res.status(500).json({
-				body: "Internal Server Error",
+				error: "Internal Server Error",
+				errorDetails: "Error while saving the article",
 			})
 		}
 		// Append current article to user's article field
@@ -57,19 +59,18 @@ module.exports.article_post = function (req, res, next) {
 					}
 					// Aborted saving					
 					res.status(500).json({
-						error: "Article could not be created",
-						body: "Internal server error",
+						errorDetails: "Error while saving the article",
+						error: "Internal server error",
 					});
 				})
 			}
 			// Felt cute, might add error handling in next version idk
 			// After saving send details of present page
 			res.json({
-				errors: null,
+				error: null,
 				body: "Article created successfully",
 				id: currentArticle._id,
 			});
-			// TODO: Redirect to current article's page
 		})
 	})
 
@@ -81,10 +82,13 @@ module.exports.singleArticle_get = function (req, res) {
 			if (findingError || !article) {
 				// if error or article is not found
 				res.status(404).json({
-					body: "Not found",
+					error: "Article not found",
+					errorDetails: "The article does not exist",
 				})
 			} else {
-				res.json(article);
+				res.json(Object.assign({
+					error: null,
+				}, article));
 			}
 		}
 	)}
@@ -95,18 +99,21 @@ module.exports.singleArticle_delete = function(req, res){
 	currentArticleId = req.params.id;
 	if (!req.user_query.id){
 		return res.status(401).json({
-			body: "You are not authorized",
+			error: "You are not authorized",
+			errorDetails: "You are not authorized to delete this article",
 		})
 	} else {
 		Article.findOneAndDelete({_id: req.params.id, author: req.user_query.id}, (findAndDelError, foundArticle) => {
 			if (findAndDelError){
 				res.status(500).json({
-					body: "Internal server error",
+					error: "Internal server error",
+					errorDetails: "Error while deleting article",
 				});
 			} else {
 				if (!foundArticle){
 					res.status(400).json({
-						body: "The article fitting the description could not be found",
+						error: "Deletion unsuccessful",
+						errorDetails: "You are not authorized to delete this article"
 					})
 				} else {
 					User.findByIdAndUpdate(req.user_query.id,
@@ -115,10 +122,12 @@ module.exports.singleArticle_delete = function(req, res){
 						(updateError) => {
 							if (updateError){
 								res.status(206).json({
-									body: "Article deleted but couldn't be cleared from user's entry",
+									error:null,
+									body: "Article deleted, but couldn't be cleared from user's entry",
 								})
 							} else {
 								res.json({
+									error: null,
 									body: "Article deleted successfully",
 								})
 							}

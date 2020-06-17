@@ -12,13 +12,13 @@ module.exports.validate_login_post = [
 
 module.exports.login_post = function(req, res, next){
 	// form data error
-	const errors = validationResult(req);
+	const validation_errors = validationResult(req);
 
 	if (!errors.isEmpty()){
 		//Bad request error
 		return res.status(422).json({
-			user: null,
-			body: "Email password is incorrect"
+			error: "Username or password is incorrect",
+			errorDetails: validation_errors,
 		});
 	}
 
@@ -26,14 +26,15 @@ module.exports.login_post = function(req, res, next){
 	User.findOne({email: req.body.email}, (findingError, foundUser) => {
 		if (findingError){
 			return res.status(500).json({
-				body: "Internal server error"
+				error: "Internal server error",
+				errorDetails: "Server error occured while searching...",
 			});
 		}
 		else if (!foundUser){
 			// Error occured or user is not found
 			return res.status(401).json({
-				user: null,
-				body: "Email or password is incorrect",
+				errorDetails: "Server error occured while searching...",
+				error: "Email or password is incorrect",
 			})
 		}
 
@@ -41,14 +42,15 @@ module.exports.login_post = function(req, res, next){
 		bcrypt.compare(req.body.password, foundUser.password, (comparingError, same) => {
 			if (comparingError){
 				res.status(500).json({
-					body: "Internal server error",
+					error: "Internal server error",
+					errorDetails: "Error occured while hashing",
 				});
 			}
 			else if (!same){
 				// If not same or
 				return res.status(401).json({
-					user: null,
-					body: "Email or password is incorrect"
+					errorDetails: "Authentication error",
+					error: "Email or password is incorrect"
 				});
 			} else {
 				// Authentication is done
@@ -62,11 +64,11 @@ module.exports.login_post = function(req, res, next){
 					{expiresIn: '14d'}, (signingError, accessToken) => {
 						if (signingError){
 							return res.status(500).json({
-								body: "Error occured while signing token",
+								error: "Internal server error",
+								errorDetails: "Error while signing token",
 							})
 						} else {
 							//set cookie
-							// duration: 14days, 23 hours, 55 minutes
 							var token = "Bearer " + accessToken;
 							//13 days 23 hrs 50 minutes
 							var twoWeekApprox = 86400*1000*14-10*60*1000;
@@ -74,7 +76,7 @@ module.exports.login_post = function(req, res, next){
 								{maxAge: twoWeekApprox, httpOnly: true,
 								}).json({
 									id: foundUser._id,
-									errors: null,
+									error: null,
 									body: "Login permission granted"
 								});
 						}
