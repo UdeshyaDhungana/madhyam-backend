@@ -5,9 +5,7 @@ const User = require('../models/users');
 const async = require('async');
 const Article = require('../models/articles');
 const nodemailer = require('nodemailer');
-const Verification = require('../models/verification');
-const jwt = require('jsonwebtoken');
-
+const verification = require('../models/verification');
 // Validation steps for creating new user
 module.exports.validate_user_post = [
 	check('firstname').exists().trim().isAlpha().isLength({ min: 3 }),
@@ -27,7 +25,7 @@ module.exports.validate_user_post = [
 ];
 
 // POST request for creating new user
-module.exports.users_post = function (req, res, next) {
+module.exports.users_post = function (req, res) {
 	const errors = validationResult(req);
 
 	if (!errors.isEmpty()) {
@@ -112,7 +110,7 @@ module.exports.users_post = function (req, res, next) {
 }
 
 // Getting a single user's profile
-module.exports.singleUser_get = function (req, res, next) {
+module.exports.singleUser_get = function (req, res) {
 	User.findById(req.params.id).populate('articles', 'title url createdAt').exec((error, user) => {
 		if (error || !user){
 			res.status(404).json({

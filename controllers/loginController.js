@@ -10,7 +10,7 @@ module.exports.validate_login_post = [
 ]
 
 
-module.exports.login_post = function(req, res, next){
+module.exports.login_post = function(req, res){
 	// form data error
 	const validation_errors = validationResult(req);
 

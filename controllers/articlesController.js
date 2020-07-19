@@ -2,8 +2,6 @@
 const { check, validationResult } = require('express-validator');
 const Article = require('../models/articles');
 const User = require('../models/users');
-const mongoose = require('mongoose');
-const ObjectId = mongoose.Types.ObjectId;
 
 // Vaidation for creating a new article
 module.exports.validate_article_post = [
@@ -17,7 +15,7 @@ module.exports.validate_article_post = [
 	}),
 ]
 // POST a new article
-module.exports.article_post = function (req, res, next) {
+module.exports.article_post = function (req, res) {
 	// JWT is needed to make sure current user is submitting this
 	const errors = validationResult(req);
 
