@@ -1,0 +1,1 @@
+These are short functions required in server which may clutter up main file, so have been separated

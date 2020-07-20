@@ -1,112 +1,83 @@
-// Imports
 const bcrypt = require('bcrypt');
-const { check, validationResult } = require('express-validator');
+const { validationResult }=  require('express-validator');
 const User = require('../models/users');
-const async = require('async');
-const Article = require('../models/articles');
 const nodemailer = require('nodemailer');
-const verification = require('../models/verification');
-// Validation steps for creating new user
-module.exports.validate_user_post = [
-	check('firstname').exists().trim().isAlpha().isLength({ min: 3 }),
-	check('lastname').exists().trim().isAlpha().isLength({ min: 3 }),
-	check('bio').isLength({ max: 100 }).escape(),
-	check('email').exists().trim().isEmail(),
-	check('password').exists().isLength({ min: 8 }).escape(),
-	// Check if username already exists
-	check('email').custom(value => {
-		return User.findOne({ email: value }).then(user => {
-			if (user) {
-				return Promise.reject('Email already in use');
-			}
-		});
-	}),
-	// Check both password matches
-];
+const SALT_ROUNDS = 10;
+const setMailOptions = require('../utilities/mailSenderConfig');
+const Verification = require('../models/verification');
 
 // POST request for creating new user
-module.exports.users_post = function (req, res) {
-	const errors = validationResult(req);
+module.exports.users_post = async function (req, res){
+	//variables required for this endpoint
+	let currentUser;
+	let currentVerification;
+	//save the user
+	try{
+		const validationErrors = validationResult(req);
 
-	if (!errors.isEmpty()) {
-		return res.status(422).json({
-			error: "Inappropriate form data",
-			errorDetails: errors.array()
+		if (!validationErrors.isEmpty()) {
+			throw {
+				type: "FORM_ERROR",
+				formErrors: validationErrors.array(),
+			}
+		}
+
+		let hashed = await bcrypt.hash(req.body.password, SALT_ROUNDS);
+
+		currentUser = await new User({
+			firstname: req.body.firstname,
+			lastname: req.body.lastname,
+			bio: req.body.bio,
+			email: req.body.email,
+			password: hashed,
+		}).save();
+
+		currentVerification = await new Verification({
+			owner: currentUser._id
+		}).save();
+
+	}
+	catch(err){
+		if ('type' in err && err.type === "FORM_ERROR"){
+			return res.status(422).json({
+				message: "Error in form",
+				errors: err.formErrors,
+			});
+		}
+		return res.status(500).json({
+			message: "Internal server error",
+			errors: null,
+			email: null,
 		})
 	}
 
-	// Hash and store password
-	// 10 rounds of salts
-	bcrypt.hash(req.body.password, 10, (hashError, hash) => {
-		if (hashError) {
-			res.json(500).json({
-				error: "Internal server error",
-				errorDetails: "Error while hashing",
-			})
-		} else {
-			new User({
-				firstname: req.body.firstname,
-				lastname: req.body.lastname,
-				bio: req.body.bio,
-				email: req.body.email,
-				password: hash
-			}).save((errorWhileSaving, createdUser) => {
-				if (errorWhileSaving) {
-					res.status(500).json({
-						error: "Internal server error",
-						errorDetails: "Error while saving user",
-					});
-				} else {
-					//send mail to that email address
-					new Verification({
-						owner: createdUser._id,
-					}).save((errorWhileVerification, createdVerification) => {
-						if (errorWhileVerification){
-							res.status(206).json({
-								error: null,
-								errorDetails: "User created but verification mailing failed"});
-						} else {
-							var transporter = nodemailer.createTransport({
-								service: 'Gmail',
-								auth: {
-									user: process.env.MADHYAM_EMAIL,
-									pass: process.env.MADHYAM_PASSWORD
-								},
-								port: 465
-							});
+	try{
+		//send the email confirmation
+		let transporter = nodemailer.createTransport({
+			service: 'Gmail',
+			auth: {
+				user: process.env.MADHYAM_EMAIL,
+				pass: process.env.MADHYAM_PASSWORD
+			},
+			port: 465
+		});
 
-							Verification_html = `
-									<h1>Email verification</h1>
-									<h3>Visit the link below to verify email</h3>
-									<a href="http://192.168.1.64:3010/verification/${createdVerification.link}">Click Here</a>
-									`;
+		let mailOptions = setMailOptions(req.body.email, currentVerification.link);
 
-							var mailOptions = {
-								from: 'Madhyam Team <075bct095.udeshya@pcampus.edu.np>',
-								to: req.body.email,
-								subject: 'Email verification',
-								html: Verification_html
-							}
+		let info = await transporter.sendMail(mailOptions);
 
-							transporter.sendMail(mailOptions, function(mailingError){
-								if (mailingError){
-									res.status(206).json({
-										error: null,
-										errorDetails: "User created but email verification failed"});
-								} else {
-									res.json({
-										error: null,
-										body: "User has been created successfully",
-									})
-								}
-							});
+		return res.json({
+			message: "User created successfully",
+			email: `${currentUser.email}`
+		});
 
-						}
-					});
-				}
-			})
-		}
-	})
+	}
+	catch(err){
+		res.status(206).json({
+			message: "User created, but mailing failed",
+			email: `${currentUser.email}`
+		})
+	}
 }
 
 // Getting a single user's profile
@@ -137,52 +108,6 @@ module.exports.singleUser_get = function (req, res) {
 				toSend['editPermission'] = true
 			}
 			res.json(Object.assign({error: null}, toSend));
-		}
-	});
-}
-
-module.exports.singleUser_delete = function(req, res){
-	if (!req.user_query.id){
-		return res.status(400).json({error: "Bad request!",
-			errorDetails: "This happened because you maybe unauthorized\
-			or the user does not exist",
-		});
-	}
-	User.findOneAndDelete({_id: req.user_query.id}, (err, foundUser) => {
-		if (err){
-			return res.status(500).json({error: "Internal Server error",
-				errorDetails: "Error while deleting",
-			});
-		}
-
-		//The chances of this thing happening is you winning a lottery
-		//This code won't execute, but kept here for safety reasons
-		else if (!foundUser){
-			return res.status(400).json({error: "Bad request", 
-				errorDetails: "Dunno, some kinda error",
-			});
-		}
-
-		else {
-			//delete all articles of that user
-			async.each(foundUser.articles, (value, callback) => {
-				Article.findByIdAndDelete(value, (err) => {
-					if (err){
-						callback(err);
-					}
-					callback();
-				});
-			}, error => {
-				if (error){
-					//Manually checking for errors
-					return res.status(500).json({error: "Something went wrong",
-						errorDetails: "Error while clearing the database",
-					});
-				}
-				else {
-					return res.json({error: null, body: "User deleted successfully"});
-				}
-			})
 		}
 	});
 }

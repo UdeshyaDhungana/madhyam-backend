@@ -1,19 +1,9 @@
 // Imports
-const { check, validationResult } = require('express-validator');
+const { validationResult } = require('express-validator');
 const Article = require('../models/articles');
 const User = require('../models/users');
 
 // Vaidation for creating a new article
-module.exports.validate_article_post = [
-	check('title').exists().trim().notEmpty().escape(),
-	check('paragraphs').exists().isArray().custom((paragraphs) => {
-		for (const paragraph in paragraphs) {
-			check(paragraph).trim().escape();
-		}
-		// if everything is alright
-		return true;
-	}),
-]
 // POST a new article
 module.exports.article_post = function (req, res) {
 	// JWT is needed to make sure current user is submitting this
@@ -38,15 +28,16 @@ module.exports.article_post = function (req, res) {
 		title: req.body.title,
 		paragraphs: req.body.paragraphs,
 		author: req.user_query.id
-	}).save((savingError, currentArticle) => {
-		if (savingError) {
-			return res.status(500).json({
-				error: "Internal Server Error",
-				errorDetails: "Error while saving the article",
-			})
-		}
-		// Append current article to user's article field
-		User.updateOne({ _id: req.user_query.id }, { $push: { articles: [currentArticle._id] } }, (updateError) => {
+	}).save()
+		.then(currentArticle => {
+			User.updateOne(
+				{ _id: req.user_query.id },
+				{ $push: { articles: [currentArticle._id]}})
+				.then(currentArticle => {
+
+				}).catch(err => {
+
+				});
 			if (updateError) {
 				// If error occured abort saving process
 				Article.deleteOne({ _id: currentArticle._id }, (deleteError) => {
@@ -70,8 +61,15 @@ module.exports.article_post = function (req, res) {
 				id: currentArticle._id,
 			});
 		})
-	})
-
+})
+	.catch(savingError => {
+		if (savingError) {
+			return res.status(500).json({
+				error: "Internal Server Error",
+				errorDetails: "Error while saving the article",
+			})
+		}
+	});
 }
 
 module.exports.singleArticle_get = function (req, res) {
@@ -90,7 +88,7 @@ module.exports.singleArticle_get = function (req, res) {
 				}, ));
 			}
 		}
-	)
+		)
 }
 
 //delte article remaining

@@ -13,7 +13,10 @@ var verificationSchema = new Schema({
 		type: Schema.Types.ObjectId,
 		ref: 'User',
 		required: true,
-	}
-});
+	},
+},
+	{timestamps: true},
+);
 
+verificationSchema.index({createdAt: 1},{expireAfterSeconds: 604800});
 module.exports = mongoose.model('Verification', verificationSchema);

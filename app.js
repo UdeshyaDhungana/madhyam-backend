@@ -1,35 +1,32 @@
 // Dependencies
 require('dotenv').config();
-var express = require('express');
-var path = require('path');
-var cookieParser = require('cookie-parser');
-var logger = require('morgan');
-var mongoose = require('mongoose');
-var cors = require('cors');
-var debug = require('debug')('database');
-var compression = require('compression');
-var helmet = require('helmet');
+const express = require('express');
+const path = require('path');
+const cookieParser = require('cookie-parser');
+const logger = require('morgan');
+const mongoose = require('mongoose');
+const cors = require('cors');
+const debug = require('debug')('database');
+const compression = require('compression');
+const helmet = require('helmet');
 // Routers
-var indexRouter = require('./routes/index');
-var usersRouter = require('./routes/users');
-var articlesRouter = require('./routes/articles');
-const loginRouter = require('./routes/login');
-const verificationRouter = require('./routes/verification');
-const validateTokenRouter = require('./routes/validateToken')
-const logoutRouter = require('./routes/logout');
-
-var verifyToken = require('./utilities/verifyToken');
-
+const indexRouter = require('./routes/index');
+const usersRouter = require('./routes/users');
+//const articlesRouter = require('./routes/articles');
+//const loginRouter = require('./routes/login');
+//const verificationRouter = require('./routes/verification');
+//const validateTokenRouter = require('./routes/validateToken')
+//const logoutRouter = require('./routes/logout');
 
 // Middlewares
 
-var app = express();
+const app = express();
 
 mongoose.connect(process.env.MONGO_URI, {
 	useNewUrlParser: true,
 	useUnifiedTopology: true,
 	useFindAndModify: false});
-var connection = mongoose.connection;
+const connection = mongoose.connection;
 connection.on('error', (x) => {
 	debug('Update error: '+ x);
 });
@@ -43,17 +40,14 @@ app.use(cookieParser());
 app.use(compression());
 app.use(express.static(path.join(__dirname, './public')));
 
-// Check if user exists and load into user_query variable if  exists
-app.use(verifyToken);
-
 // Routing middlewares
 app.use('/api/', indexRouter);
 app.use('/api/users', usersRouter);
-app.use('/api/articles', articlesRouter);
-app.use('/api/login', loginRouter);
-app.use('/api/validatetoken', validateTokenRouter);
-app.use('/api/logout', logoutRouter);
+//app.use('/api/articles', articlesRouter);
+//app.use('/api/login', loginRouter);
+//app.use('/api/validatetoken', validateTokenRouter);
+//app.use('/api/logout', logoutRouter);
 //used for link verification
-app.use('/api/verification', verificationRouter);
+//app.use('/api/verification', verificationRouter);
 
 module.exports = app;
