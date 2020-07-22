@@ -7,6 +7,8 @@ const setMailOptions = require('../utilities/mailSenderConfig');
 const Verification = require('../models/verification');
 const Article = require('../models/articles');
 
+const extractJWT = require('../middlewares/extract-jwt');
+
 // POST request for creating new user
 module.exports.users_post = async function (req, res){
   //variables required for this endpoint
@@ -47,7 +49,7 @@ module.exports.users_post = async function (req, res){
     }
     return res.status(500).json({
       message: "Internal server error",
-      errors: null,
+      errors: true,
       email: null,
     })
   }
@@ -75,7 +77,7 @@ module.exports.users_post = async function (req, res){
   }
   catch(err){
     res.status(206).json({
-      message: "User created, but mailing failed",
+      message: "Account Created. Could not send email. You may login though!",
       email: `${currentUser.email}`
     });
   }
@@ -83,14 +85,18 @@ module.exports.users_post = async function (req, res){
 
 // Getting a single user's profile
 module.exports.singleUser_get = async function (req, res) {
+
   let user, toSend;
   try{
+    /* This route needs authorization, so we extract JWT from cookies */
+    extractJWT(req);
     user = await User.findById(req.params.id)
       .populate('articles', 'title url createdAt');
 
     if (!user){
       res.status(404).json({
         message: "The requested user could not be found",
+        errors: true,
       });
     }
 
@@ -105,18 +111,18 @@ module.exports.singleUser_get = async function (req, res) {
       url: user.url,
       _id: user._id
     }
-//Email is private, just for heck of it
-//    if (req.user_query.id == req.params.id){
-//      toSend['email'] = user.email;
-//      toSend['editPermission'] = true
-//    }
-    res.json(Object.assign({error: null}, toSend));
+    /* Email is private, just for heck of it */
+    if (req.user_query.id === req.params.id){
+      toSend['email'] = user.email;
+      toSend['editPermission'] = true
+    }
+    res.json(Object.assign({errors: null}, toSend));
   }
 
   catch(x){
-    console.log(x);
     res.status(500).json({
       message: "Internal server error",
+      errors: true,
     });
   }
 }

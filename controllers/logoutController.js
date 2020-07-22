@@ -1,14 +1,15 @@
-module.exports.logout_get = function(req, res, next){
+module.exports.logout_get = function(req, res){
   if (!req.user_query.id){
     res.status(400).json({
-      error: "Bad request",
-      errorDetails: "You must be logged in to do this",
+      message: "You must be logged in!",
+      errors: true,
     });
-  } else {
+  }
+  else {
     res.clearCookie('authorization');
     res.json({
-      error: null,
-      body: "Cookie deleted successfully",
+      errors: null,
+      message: "Logged out!",
     })
   }
 }

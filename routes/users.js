@@ -7,8 +7,8 @@ const userControllerMiddlewares = require("../middlewares/userMiddlewares");
 
 // CREATING A NEW USER
 router.post("/",
-	userControllerMiddlewares.validate_user_post,
-	usersController.users_post);
+  userControllerMiddlewares.validate_user_post,
+  usersController.users_post);
 
 // GET a specific user
 router.get("/:id",usersController.singleUser_get);

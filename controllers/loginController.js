@@ -25,6 +25,7 @@ module.exports.login_post = async (req, res) => {
     if (!currentUser){
       return res.status(401).json({
         message: "Credentials did not match",
+        errors: true,
       });
     }
 
@@ -33,6 +34,7 @@ module.exports.login_post = async (req, res) => {
     if (!didMatch){
       return res.status(401).json({
         message: "Credentials did not match",
+        errors: true,
       })
     }
 
@@ -68,7 +70,7 @@ module.exports.login_post = async (req, res) => {
       });
     }
     res.status(500).json({
-      error: true,
+      errors: true,
       message: "Internal server error"
     });
   }

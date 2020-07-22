@@ -2,39 +2,48 @@
 const Verification = require('../models/verification');
 const User = require('../models/users');
 
-module.exports.verification_get = function(req, res, next){
+module.exports.verification_get = async (req, res) => {
   currentLink = req.params.id;
-  Verification.findOneAndDelete({link: currentLink}, (findingError, foundVerification) => {
-    if (findingError){
-      res.status(500).json({
-        error: "Internal server error",
-        errorDetails: "Deletion error",
-      });
-    } else {
-      if (!foundVerification){
-        return res.status(400).json({
-          error: "Bad request",
-          errorDetails: "Bad request",
-        });
-      }
 
-      var relatedUserId = foundVerification.owner;
-      User.findByIdAndUpdate(relatedUserId, {
-        emailConfirmation: true,
-      }, (updateError, user) => {
-        if (updateError){
-          res.status(500).json({
-            error: "Internal server error",
-            errorDetails: "Error while updating data",
-          });
-        } else {
-          //Email was verified, so no worries
-          res.json({
-            error: null,
-            body: "Email is verified"
-          });
-        }
+  try{
+
+    let foundVerification = await Verification.findOneAndDelete(
+      {link: currentLink},
+      (findingError, foundVerification) 
+    );
+
+    if (!foundVerification){
+      res.status(404).json({
+        errors: true,
+        message: "The requested entity could not be found",
       });
     }
-  });
+    //verification was found: find corresponding user, and update
+    var relatedUserId = foundVerification.owner;
+
+    let user = await User.findByIdAndUpdate(relatedUserId, {
+      emailConfirmation: true,
+    }, (updateError, user));
+
+    //this will never happen provided i haven't setup an endpoint for user deletion
+    if (!user){
+      res.status(404).json({
+        errors: true,
+        message: "User does not exist!",
+      });
+    }
+
+    //everything was alright
+    res.json({
+      errors: false,
+      message: "Email successfully verified. You may close this tab!",
+    });
+
+  }
+  catch(err){
+    res.status(500).json({
+      message: "Internal server error",
+      errors: true,
+    });
+  }
 }
