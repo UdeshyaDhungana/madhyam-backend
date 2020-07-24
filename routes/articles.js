@@ -1,11 +1,13 @@
 var express = require('express');
 var router = express.Router();
 
+//middlewares import
+var articleMiddlewares = require('../middlewares/articleMiddlewares');
 //Controllers import
 var articlesController = require('../controllers/articlesController');
 
 // POST a new article
-router.post('/', articlesController.validate_article_post, articlesController.article_post);
+router.post('/', articleMiddlewares.validate_article_post, articlesController.article_post);
 
 // GET single article
 router.get('/:id', articlesController.singleArticle_get);

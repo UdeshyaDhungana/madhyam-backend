@@ -5,71 +5,54 @@ const User = require('../models/users');
 
 // Vaidation for creating a new article
 // POST a new article
-module.exports.article_post = function (req, res) {
-  // JWT is needed to make sure current user is submitting this
-  const errors = validationResult(req);
+module.exports.article_post = async (req, res) =>  {
+  try{
+    const errors = validationResult(req);
 
-  if (!errors.isEmpty()) {
-    //unprocessable entity
-    return res.status(422).json({
-      error: "Inappropriate form data",
-      errorDetails: errors.array()
-    })
-  }
-
-  if (!req.user_query.id) {
-    return res.status(401).json({
-      error: "Unauthorized user",
-      errorDetails: "User does not exist, or token has expired",
-    })
-  }
-
-  new Article({
-    title: req.body.title,
-    paragraphs: req.body.paragraphs,
-    author: req.user_query.id
-  }).save()
-    .then(currentArticle => {
-      User.updateOne(
-        { _id: req.user_query.id },
-        { $push: { articles: [currentArticle._id]}})
-        .then(currentArticle => {
-
-        }).catch(err => {
-
-        });
-      if (updateError) {
-        // If error occured abort saving process
-        Article.deleteOne({ _id: currentArticle._id }, (deleteError) => {
-          if (deleteError) {
-            // THIS IS MANDATORY TO DEBUG
-            // This is next level error
-            console.log(`Error while saving post ${deleteError}`);
-          }
-          // Aborted saving         
-          res.status(500).json({
-            errorDetails: "Error while saving the article",
-            error: "Internal server error",
-          });
-        })
+    //to recieve safely from catch block
+    if (!errors.isEmpty()){
+      throw {
+        type: "FORM_ERROR",
+        formErrors: errors.array(),
       }
-      // Felt cute, might add error handling in next version idk
-      // After saving send details of present page
-      res.json({
-        error: null,
-        body: "Article created successfully",
-        id: currentArticle._id,
-      });
-    })
-})
-  .catch(savingError => {
-    if (savingError) {
-      return res.status(500).json({
-        error: "Internal Server Error",
-        errorDetails: "Error while saving the article",
-      })
     }
-  });
+
+    //save article
+    let currentArticle = await new Article({
+      title: req.body.title,
+      paragraphs: req.body.paragraphs,
+      author: req.user_query.id,
+    }).save();
+
+    //push article to user/articles
+    let _ = await User.updateOne(
+      {_id: req.user_query.id},
+      {$push: {articles: [currentArticle._id]}},
+    );
+
+    //return success
+    return res.json({
+      errors: false,
+      message: "Article created successfully",
+      articleURL: currentArticle.url,
+    });
+
+  }
+  catch(err){
+    //if form error
+    if ('type' in err && err['type'] === "FORM_ERROR"){
+      res.status(400).json({
+        errors: true,
+        message: "Client Error",
+        errorDetails: err.formErrors,
+      });
+    } else {
+      res.status(500).json({
+        errors: true,
+        message: "Internal Server Error",
+      });
+    }
+  }
 }
 
 module.exports.singleArticle_get = function (req, res) {

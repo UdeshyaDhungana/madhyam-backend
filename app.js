@@ -13,7 +13,7 @@ const helmet = require('helmet');
 /* Routers */
 const indexRouter = require('./routes/index');
 const usersRouter = require('./routes/users');
-//const articlesRouter = require('./routes/articles');
+const articlesRouter = require('./routes/articles');
 const loginRouter = require('./routes/login');
 const verificationRouter = require('./routes/verification');
 const logoutRouter = require('./routes/logout');
@@ -44,7 +44,7 @@ app.use(express.static(path.join(__dirname, './public')));
 // Routing middlewares
 app.use('/api/', indexRouter);
 app.use('/api/users', usersRouter);
-//app.use('/api/articles', articlesRouter);
+app.use('/api/articles', articlesRouter);
 app.use('/api/login', loginRouter);
 app.use('/api/logout', logoutRouter);
 //used for link verification

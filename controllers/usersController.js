@@ -109,12 +109,8 @@ module.exports.singleUser_get = async function (req, res) {
       editPermission: false,
       fullname: user.fullname,
       url: user.url,
-      _id: user._id
-    }
-    /* Email is private, just for heck of it */
-    if (req.user_query.id === req.params.id){
-      toSend['email'] = user.email;
-      toSend['editPermission'] = true
+      _id: user._id,
+      email: user.email
     }
     res.json(Object.assign({errors: null}, toSend));
   }
