@@ -4,7 +4,6 @@ const User = require('../models/users');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
-
 module.exports.login_post = async (req, res) => {
   // form data error
   const validation_errors = validationResult(req);
@@ -14,7 +13,10 @@ module.exports.login_post = async (req, res) => {
 
     if (!validation_errors.isEmpty()){
       //Bad request error
-      throw {type: "FORM_ERROR"};
+      throw {
+        type: "FORM_ERROR",
+        message: "Error in form",
+      };
     }
 
     currentUser = await User.findOne({
@@ -23,19 +25,19 @@ module.exports.login_post = async (req, res) => {
 
     //if not users found
     if (!currentUser){
-      return res.status(401).json({
-        message: "Credentials did not match",
-        errors: true,
-      });
+      throw {
+        type: "NOT_FOUND",
+        message: "Credentials do not match",
+      }
     }
 
     //bcrypt compare
     let didMatch = await bcrypt.compare(req.body.password, currentUser.password);
     if (!didMatch){
-      return res.status(401).json({
+      throw {
+        type: "NO_MATCH",
         message: "Credentials did not match",
-        errors: true,
-      })
+      }
     }
 
     //if password matched
@@ -63,13 +65,22 @@ module.exports.login_post = async (req, res) => {
       });
   }
   catch(e){
-    if ('type' in e && e.type==="FORM_ERROR"){
-      return res.status(400).json({
-        errors: true,
-        message: "Error in form",
-      });
+    if ('type' in e){
+      switch (e.type){
+        case 'NO_MATCH':
+        case "NOT_FOUND":
+          return res.status(401).json({
+            errors: true,
+            message: e.message,
+          });
+        case 'FORM_ERROR':
+          return es.status(422).json({
+            errors: true,
+            message: e.message,
+          });
+      }
     }
-    res.status(500).json({
+    return res.status(500).json({
       errors: true,
       message: "Internal server error"
     });

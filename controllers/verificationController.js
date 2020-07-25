@@ -13,10 +13,10 @@ module.exports.verification_get = async (req, res) => {
     );
 
     if (!foundVerification){
-      res.status(404).json({
-        errors: true,
-        message: "The requested entity could not be found",
-      });
+      throw {
+        type: "NOT_FOUND",
+        message: "The requested verification could not be found",
+      }
     }
     //verification was found: find corresponding user, and update
     var relatedUserId = foundVerification.owner;
@@ -27,10 +27,10 @@ module.exports.verification_get = async (req, res) => {
 
     //this will never happen provided i haven't setup an endpoint for user deletion
     if (!user){
-      res.status(404).json({
-        errors: true,
-        message: "User does not exist!",
-      });
+      throw {
+        type: "NOT_FOUND",
+        message: "User not found",
+      }
     }
 
     //everything was alright
@@ -41,7 +41,17 @@ module.exports.verification_get = async (req, res) => {
 
   }
   catch(err){
-    res.status(500).json({
+    if ('type' in err){
+      switch (err.type){
+        case 'NOT_FOUND':
+          return res.status(404).json({
+            errors: true,
+            message: err.message,
+          });
+      }
+    }
+
+    return res.status(500).json({
       message: "Internal server error",
       errors: true,
     });

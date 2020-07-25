@@ -7,7 +7,9 @@ const setMailOptions = require('../utilities/mailSenderConfig');
 const Verification = require('../models/verification');
 const Article = require('../models/articles');
 
+//middlewares and utilities
 const extractJWT = require('../middlewares/extract-jwt');
+
 
 // POST request for creating new user
 module.exports.users_post = async function (req, res){
@@ -85,8 +87,7 @@ module.exports.users_post = async function (req, res){
 
 // Getting a single user's profile
 module.exports.singleUser_get = async function (req, res) {
-
-  let user, toSend;
+  let user;
   try{
     /* This route needs authorization, so we extract JWT from cookies */
     extractJWT(req);
@@ -94,29 +95,40 @@ module.exports.singleUser_get = async function (req, res) {
       .populate('articles', 'title url createdAt');
 
     if (!user){
-      res.status(404).json({
-        message: "The requested user could not be found",
-        errors: true,
-      });
+      throw {
+        type: "NOT_FOUND",
+        message: "Article not found",
+      }
     }
 
     //filter out appropriate fields to send
-    toSend = {
-      firstname: user.firstname,
-      lastname: user.lastname,
-      bio: user.bio,
-      articles: user.articles,
-      editPermission: false,
-      fullname: user.fullname,
-      url: user.url,
-      _id: user._id,
-      email: user.email
-    }
-    res.json(Object.assign({errors: null}, toSend));
+    res.json({
+      errors: false,
+      user: {
+        firstname: user.firstname,
+        lastname: user.lastname,
+        bio: user.bio,
+        articles: user.articles,
+        editPermission: false,
+        fullname: user.fullname,
+        url: user.url,
+        _id: user._id,
+        email: user.email
+      }
+    });
   }
 
   catch(x){
-    res.status(500).json({
+    if ('type' in x){
+      switch (x.type){
+        case 'NOT_FOUND':
+          return res.status(404).json({
+            errors: true,
+            message: x.message,
+          });
+      }
+    }
+    return res.status(500).json({
       message: "Internal server error",
       errors: true,
     });

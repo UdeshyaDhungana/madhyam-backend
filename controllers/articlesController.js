@@ -3,6 +3,9 @@ const { validationResult } = require('express-validator');
 const Article = require('../models/articles');
 const User = require('../models/users');
 
+//middlewares
+const extractJWT = require('../middlewares/extract-jwt');
+
 // Vaidation for creating a new article
 // POST a new article
 module.exports.article_post = async (req, res) =>  {
@@ -13,6 +16,7 @@ module.exports.article_post = async (req, res) =>  {
     if (!errors.isEmpty()){
       throw {
         type: "FORM_ERROR",
+        message: "Error in form",
         formErrors: errors.array(),
       }
     }
@@ -40,12 +44,15 @@ module.exports.article_post = async (req, res) =>  {
   }
   catch(err){
     //if form error
-    if ('type' in err && err['type'] === "FORM_ERROR"){
-      res.status(400).json({
-        errors: true,
-        message: "Client Error",
-        errorDetails: err.formErrors,
-      });
+    if ('type' in err){
+      switch (err.type){
+        case 'FORM_ERROR':
+          res.status(400).json({
+            errors: true,
+            message: err.message,
+            errorDetails: err.formErrors,
+          });
+      }
     } else {
       res.status(500).json({
         errors: true,
@@ -55,65 +62,88 @@ module.exports.article_post = async (req, res) =>  {
   }
 }
 
-module.exports.singleArticle_get = function (req, res) {
-  Article.findById(req.params.id).populate('author', 'firstname lastname fullname url')
-    .exec((findingError, article) => {
-      if (findingError || !article) {
-        // if error or article is not found
-        res.status(404).json({
-          error: "Article not found",
-          errorDetails: "The article does not exist",
-        })
-      } else {
-        res.json(Object.assign({
-          article: article._doc,
-          error: null,
-        }, ));
+// GET single article
+module.exports.singleArticle_get = async (req, res) => {
+  try{
+    //check if url is in ObjectID format
+    let article = await Article.findById(req.params.id)
+      .populate('author', 'firstname lastname fullname url').exec();
+
+    if (!article){
+      throw {
+        type: "NOT_FOUND",
+        message: "The article could not be found",
       }
     }
-    )
+    res.json({
+      errors: false,
+      article: article,
+    });
+  }
+  catch(x){
+    if ('type' in x){
+      switch (x.type){
+        case 'NOT_FOUND':
+          return res.status(404).json({
+            errors: true,
+            message: x.message,
+          });
+      }
+    }
+    return res.status(500).json({
+      errors: true,
+      message: "Internal Server Error",
+    });
+  }
 }
 
-//delte article remaining
-module.exports.singleArticle_delete = function(req, res){
+// DELETE article 
+module.exports.singleArticle_delete = async (req, res) => {
   currentArticleId = req.params.id;
-  if (!req.user_query.id){
-    return res.status(401).json({
-      error: "You are not authorized",
-      errorDetails: "You are not authorized to delete this article",
-    })
-  } else {
-    Article.findOneAndDelete({_id: req.params.id, author: req.user_query.id}, (findAndDelError, foundArticle) => {
-      if (findAndDelError){
-        res.status(500).json({
-          error: "Internal server error",
-          errorDetails: "Error while deleting article",
-        });
-      } else {
-        if (!foundArticle){
-          res.status(400).json({
-            error: "Deletion unsuccessful",
-            errorDetails: "You are not authorized to delete this article"
-          })
-        } else {
-          User.findByIdAndUpdate(req.user_query.id,
-            { $pullAll: {articles: [req.params.id] } },
-            { new: true },
-            (updateError) => {
-              if (updateError){
-                res.status(206).json({
-                  error:null,
-                  body: "Article deleted, but couldn't be cleared from user's entry",
-                })
-              } else {
-                res.json({
-                  error: null,
-                  body: "Article deleted successfully",
-                })
-              }
-            });
-        }
+  try{
+    extractJWT(req);
+    if (!req.user_query.id){
+      throw {
+        type: "NO_USER",
+        message: "No user present",
       }
+    }
+
+    let foundArticle = await Article.findOneAndDelete({
+      _id: req.params.id, author: req.user_query.id
+    });
+
+    if (!foundArticle){
+      throw {
+        type: "NOT_FOUND",
+        message: "The requested article could not be found",
+      }
+    } 
+
+    return res.json({
+      errors: true,
+      message: "Article deleted successfully",
+    });
+  }
+
+  catch(x){
+    if ('type' in x){
+      switch (x.type){
+        case 'NO_USER':
+          return res.status(401).json({
+            errors: true,
+            message: x.message,
+          });
+        case 'NOT_FOUND':
+          return res.status(404).json({
+            errors: true,
+            message: x.message,
+          })
+      }
+    }
+    res.status(500).json({
+      errors: true,
+      message: "Internal Server Error",
     });
   }
 }
